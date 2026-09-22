@@ -1,11 +1,11 @@
 # Task Coordinator
 
-本仓库是局域网任务协调服务。任务状态的唯一事实源是本服务的 SQLite 数据库。运行时不依赖 Git pull、commit 或 push。
+本仓库是局域网任务协调服务。任务状态的唯一事实源是本服务配置的关系数据库（本地测试可用 SQLite，部署环境使用 MySQL）。运行时不依赖 Git pull、commit 或 push。
 
 ## 边界
 
 - 本服务只记录任务状态、分支名和提交号。它不执行 `git pull`、`commit`、`merge`、`push`，也不修改任何游戏工程。
-- 不把 SQLite、备份或日志放到 OneDrive、NAS 或 Windows 共享目录。只有本机服务进程打开数据库文件。
+- 不把 SQLite、备份或日志放到 OneDrive、NAS 或 Windows 共享目录。生产 MySQL 由数据库服务负责持久化。
 - 不把真实密码、API token、claim token、session secret 写入源码、文档、测试夹具或日志。
 - `data/*.sqlite3`、`data/backups/`、`logs/`、`.env` 和本机 `config/service.toml` 不进入 Git。
 - 不修改、覆盖或删除 TinySwordsPM 的 `data/tasks.json`。迁移只读源文件。
@@ -13,7 +13,7 @@
 
 ## 技术栈
 
-Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest、SQLite（WAL）。页面使用 Vue 2.7.16 + Element UI 2.15.14，本地静态依赖，无 Node 构建。
+Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest、MySQL（生产）/ SQLite（测试）。页面使用 Vue 2.7.16 + Element UI 2.15.14，本地静态依赖，无 Node 构建。
 
 ## Web 界面约定
 
@@ -35,7 +35,7 @@ Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest�
 
 ## 写入规则
 
-- 所有写接口放在数据库事务里，使用 SQLite `BEGIN IMMEDIATE`。
+- 所有写接口放在数据库事务里；SQLite 测试使用 `BEGIN IMMEDIATE`，MySQL 使用 InnoDB 事务和行锁。
 - 写接口必须校验调用者、状态机和 version 或 claim token。
 - 每次状态变化追加 `task_events`。审计行只插入，不更新、不删除。
 - Agent 写操作必须支持 `Idempotency-Key`。相同键和相同请求重放第一次的结果；相同键不同请求体返回 `409 IDEMPOTENCY_KEY_REUSED`。

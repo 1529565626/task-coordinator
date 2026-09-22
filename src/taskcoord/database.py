@@ -102,28 +102,30 @@ def prepare_database(settings: Settings, engine: Engine) -> None:
     command.upgrade(alembic_config(settings), "head")
     _assert_integrity(engine)
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "INSERT INTO service_meta(key, value) VALUES ('schema_version', '1') "
-                "ON CONFLICT(key) DO UPDATE SET value='1'"
-            )
-        )
+        if engine.dialect.name == "mysql":
+            connection.execute(text("INSERT INTO service_meta(`key`, value) VALUES ('schema_version', '1') ON DUPLICATE KEY UPDATE value='1'"))
+        else:
+            connection.execute(text("INSERT INTO service_meta(key, value) VALUES ('schema_version', '1') ON CONFLICT(key) DO UPDATE SET value='1'"))
 
 
 def _refuse_unknown_revision(settings: Settings, engine: Engine) -> None:
     script = ScriptDirectory.from_config(alembic_config(settings))
     known = {rev.revision for rev in script.walk_revisions()}
     with engine.connect() as connection:
-        rows = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'")).fetchall()
-        if not rows:
-            return
-        current = {row[0] for row in connection.execute(text("SELECT version_num FROM alembic_version"))}
+        try:
+            current = {row[0] for row in connection.execute(text("SELECT version_num FROM alembic_version"))}
+        except Exception as exc:
+            if "doesn't exist" in str(exc).lower() or "no such table" in str(exc).lower():
+                return
+            raise
     unknown = current - known
     if unknown:
         raise SchemaTooNewError(f"database schema {sorted(unknown)} is newer than this build")
 
 
 def _assert_integrity(engine: Engine) -> None:
+    if engine.dialect.name != "sqlite":
+        return
     with engine.connect() as connection:
         row = connection.execute(text("PRAGMA integrity_check")).fetchone()
     if row is None or row[0] != "ok":

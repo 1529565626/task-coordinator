@@ -39,6 +39,8 @@ def backup_database(settings: Settings, session: Session | None = None) -> dict:
 
 
 def maybe_scheduled_backup(settings: Settings, session: Session) -> dict | None:
+    if not settings.database_url.startswith("sqlite"):
+        return None
     last = _get_meta(session, "last_backup_at")
     if last:
         try:
@@ -108,6 +110,9 @@ def prune_backups(settings: Settings) -> int:
 
 
 def quick_check(session: Session) -> str:
+    if session.bind is not None and session.bind.dialect.name != "sqlite":
+        session.execute(text("SELECT 1"))
+        return "ok"
     row = session.execute(text("PRAGMA quick_check")).fetchone()
     return row[0] if row else "fail"
 

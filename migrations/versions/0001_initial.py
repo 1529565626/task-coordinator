@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import mysql
 
 revision = "0001_initial"
 down_revision = None
@@ -119,9 +120,9 @@ def upgrade() -> None:
         "import_batches",
         sa.Column("id", sa.String(80), primary_key=True),
         sa.Column("source_sha256", sa.String(64), nullable=False),
-        sa.Column("report_json", sa.Text(), nullable=False),
-        sa.Column("payload_json", sa.Text(), nullable=False),
-        sa.Column("committed_result_json", sa.Text(), nullable=True),
+        sa.Column("report_json", sa.Text().with_variant(mysql.LONGTEXT(), "mysql"), nullable=False),
+        sa.Column("payload_json", sa.Text().with_variant(mysql.LONGTEXT(), "mysql"), nullable=False),
+        sa.Column("committed_result_json", sa.Text().with_variant(mysql.LONGTEXT(), "mysql"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_table(

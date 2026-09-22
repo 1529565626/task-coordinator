@@ -11,7 +11,7 @@ taskctl admin create-agent --id codex-machine-a --name "Codex A" --machine machi
 用户目录 `~/.taskcoord/config.toml`：
 
 ```toml
-server_url = "http://127.0.0.1:8787"
+server_url = "http://192.168.31.163:8787"
 agent_id = "codex-machine-a"
 project_key = "map-build"
 ```
