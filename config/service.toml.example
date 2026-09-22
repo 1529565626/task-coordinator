@@ -1,0 +1,23 @@
+# Non-secret configuration. Copy to config/service.toml.
+# Bind 127.0.0.1 until the host is ready for the LAN.
+
+[server]
+host = "127.0.0.1"
+port = 8787
+anonymous_read = true
+
+[database]
+url = "sqlite:///E:/godot/task-coordinator/data/taskcoord.sqlite3"
+busy_timeout_ms = 5000
+
+[leases]
+duration_minutes = 120
+heartbeat_minutes = 15
+
+[backup]
+directory = "E:/godot/task-coordinator/data/backups"
+retention_days = 30
+
+[logging]
+path = "E:/godot/task-coordinator/logs/taskcoord.log"
+retention_days = 14
