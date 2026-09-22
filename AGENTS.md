@@ -13,7 +13,17 @@
 
 ## 技术栈
 
-Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest、SQLite（WAL）。页面是原生 HTML/CSS/JS，无 Node 构建。
+Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest、SQLite（WAL）。页面使用 Vue 2.7.16 + Element UI 2.15.14，本地静态依赖，无 Node 构建。
+
+## Web 界面约定
+
+- `src/taskcoord/web/index.html` 为正式入口；`dashboard.js` 管理 Vue 状态与 API 交互，`dashboard.css` 定义布局与蓝/绿/橙三套主题。
+- `web/vendor/` 保存固定版本发行文件、字体及许可证，运行时不请求 CDN；升级依赖时更新版本说明。
+- `demo.html` 保留设计预览，不作为真实任务来源；正式页只显示 API 数据。
+- 管理员操作沿用会话、CSRF、幂等键和任务版本检查；界面不得绕过服务端状态机。
+- 不覆盖正在编辑的表单；失败显示明确错误，未登录保留可用的只读入口。
+- 主题只在浏览器本地保存，不存储密码或令牌。验证应包含三套主题、窄屏、空数据、登录失效与实际任务流程。
+- 本项目的个人局域网实例使用 `anonymous_admin = true`，不启用账户权限；公开部署前必须关闭该选项并恢复管理员认证。
 
 ## 目录
 

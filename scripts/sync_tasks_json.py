@@ -30,6 +30,8 @@ def _ensure_admin_login() -> None:
     session_path = _home() / "admin.json"
     if session_path.is_file():
         return
+    if os.environ.get("TASKCOORD_ANONYMOUS_ADMIN", "").lower() in {"1", "true", "yes", "on"}:
+        return
     password = os.environ.get("TASKCOORD_ADMIN_PASSWORD", "").strip()
     if not password:
         bootstrap_file = ROOT / "data" / "migration" / ".initial-admin-password"
@@ -59,13 +61,12 @@ def _ensure_admin_login() -> None:
 
 def _admin_request(method: str, path: str, body: bytes | None = None, content_type: str = "application/json") -> dict:
     session_path = _home() / "admin.json"
-    if not session_path.is_file():
+    headers = {}
+    if session_path.is_file():
+        session = json.loads(session_path.read_text(encoding="utf-8"))
+        headers.update({"X-CSRF-Token": session["csrf_token"], "Cookie": f"taskcoord_session={session['cookie']}"})
+    elif os.environ.get("TASKCOORD_ANONYMOUS_ADMIN", "").lower() not in {"1", "true", "yes", "on"}:
         raise RuntimeError("缺少 admin 会话，请先 taskctl admin login")
-    session = json.loads(session_path.read_text(encoding="utf-8"))
-    headers = {
-        "X-CSRF-Token": session["csrf_token"],
-        "Cookie": f"taskcoord_session={session['cookie']}",
-    }
     if body is not None:
         headers["Content-Type"] = content_type
         headers["Idempotency-Key"] = hashlib.sha256(body).hexdigest()[:32]

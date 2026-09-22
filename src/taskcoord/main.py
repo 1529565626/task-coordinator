@@ -150,6 +150,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND", "message": "页面尚未安装"}})
         return FileResponse(page)
 
+    @app.get("/demo")
+    def demo():
+        page = web_dir / "demo.html"
+        if not page.exists():
+            return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND", "message": "Demo 页面尚未安装"}})
+        return FileResponse(page)
+
     return app
 
 

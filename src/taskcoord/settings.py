@@ -14,6 +14,7 @@ class Settings(BaseModel):
     host: str = "127.0.0.1"
     port: int = 8787
     anonymous_read: bool = True
+    anonymous_admin: bool = False
     database_url: str
     busy_timeout_ms: int = 5000
     lease_duration_minutes: int = 120
@@ -97,6 +98,7 @@ def load_settings() -> Settings:
         host=_env("TASKCOORD_HOST") or server.get("host", "127.0.0.1"),
         port=int(_env("TASKCOORD_PORT") or server.get("port", 8787)),
         anonymous_read=_bool_env("TASKCOORD_ANONYMOUS_READ", server.get("anonymous_read", True)),
+        anonymous_admin=_bool_env("TASKCOORD_ANONYMOUS_ADMIN", server.get("anonymous_admin", False)),
         database_url=db_url,
         busy_timeout_ms=int(_env("TASKCOORD_BUSY_TIMEOUT_MS") or database.get("busy_timeout_ms", 5000)),
         lease_duration_minutes=int(_env("TASKCOORD_LEASE_MINUTES") or leases.get("duration_minutes", 120)),

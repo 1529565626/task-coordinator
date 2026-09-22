@@ -49,6 +49,8 @@ def resolve_actor(request: Request, session: Session = Depends(db_session)) -> A
             if user is not None:
                 return Actor(kind="admin", user=user, session=row)
         # Stale cookies fall through to anonymous so read-only pages still work.
+    if request.app.state.settings.anonymous_admin:
+        return Actor(kind="admin")
     return Actor(kind="anonymous")
 
 
@@ -71,6 +73,8 @@ def require_reader(request: Request, actor: Actor = Depends(resolve_actor)) -> A
 
 
 def require_csrf(request: Request, actor: Actor = Depends(resolve_actor)) -> Actor:
+    if actor.user is None and actor.kind == "admin":
+        return actor
     if actor.kind != "admin":
         return actor
     if request.method in {"GET", "HEAD", "OPTIONS"}:

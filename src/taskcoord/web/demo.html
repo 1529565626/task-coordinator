@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Coordinator · Vue UI Demo</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="/assets/demo.css?v=2">
+  <style>
+    /* Critical layout fallback: keeps the demo usable while a stale static asset is cached. */
+    html,body,#app{min-height:100%;} body{min-width:960px}.demo-shell{display:flex;min-height:100vh}.sidebar{flex:0 0 236px}.demo-shell>.el-container{display:flex;flex:1;min-width:0;flex-direction:column}.topbar{flex:0 0 76px}.main{flex:1;min-width:0}.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.task-card{display:block}.stats-row,.content-row{display:flex}.content-row>.el-col{min-width:0}.panel{overflow:hidden}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <el-container class="demo-shell">
+      <el-aside width="236px" class="sidebar">
+        <div class="brand"><span class="brand-mark">TC</span><div><strong>TaskFlow</strong><small>任务协调中心</small></div></div>
+        <el-menu default-active="dashboard" class="side-menu">
+          <el-menu-item index="dashboard"><i class="el-icon-data-analysis"></i><span>工作台</span></el-menu-item>
+          <el-menu-item index="tasks"><i class="el-icon-s-order"></i><span>任务池</span><el-badge value="12" class="menu-badge"></el-badge></el-menu-item>
+          <el-menu-item index="agents"><i class="el-icon-connection"></i><span>Agent</span></el-menu-item>
+          <el-menu-item index="events"><i class="el-icon-time"></i><span>审计日志</span></el-menu-item>
+        </el-menu>
+        <div class="sidebar-foot"><span class="online-dot"></span>服务运行中<div class="version">v0.1.0 · 内网服务</div></div>
+      </el-aside>
+      <el-container>
+        <el-header class="topbar">
+          <div><div class="crumb">工作台 / 今日概览</div><h1>任务协调中心</h1></div>
+          <div class="top-actions"><el-input v-model="query" prefix-icon="el-icon-search" placeholder="搜索任务" size="small" class="global-search"></el-input><el-button icon="el-icon-refresh" circle size="small"></el-button><el-avatar size="small" class="avatar">A</el-avatar></div>
+        </el-header>
+        <el-main class="main">
+          <div class="hero-row"><div><h2>早上好，管理员</h2><p>这里是团队任务的实时状态。</p></div><el-button type="primary" icon="el-icon-plus" @click="newTask">新建任务</el-button></div>
+          <el-row :gutter="16" class="stats-row">
+            <el-col :span="6" v-for="stat in stats" :key="stat.label"><div class="stat-card"><div class="stat-icon" :class="stat.tone"><i :class="stat.icon"></i></div><div><div class="stat-label">{{stat.label}}</div><div class="stat-value">{{stat.value}}</div><div class="stat-trend" :class="stat.trend > 0 ? 'up' : 'down'"><i :class="stat.trend > 0 ? 'el-icon-top' : 'el-icon-bottom'"></i>{{Math.abs(stat.trend)}}% 较上周</div></div></div></el-col>
+          </el-row>
+          <el-row :gutter="16" class="content-row">
+            <el-col :span="16"><el-card shadow="never" class="panel"><div slot="header" class="panel-head"><span>任务状态</span><el-button type="text" @click="showAll">查看全部 <i class="el-icon-arrow-right"></i></el-button></div><div class="board"><div v-for="column in board" :key="column.key" class="board-column"><div class="column-title"><span><i class="column-dot" :class="column.key"></i>{{column.label}}</span><el-tag size="mini" effect="plain">{{column.items.length}}</el-tag></div><div v-for="task in column.items" :key="task.id" class="task-card" @click="selectTask(task)"><div class="task-top"><el-tag :type="task.priority === '高' ? 'danger' : 'info'" size="mini">{{task.priority}}优先级</el-tag><span class="task-id">{{task.id}}</span></div><div class="task-title">{{task.title}}</div><div class="task-meta"><span><i class="el-icon-folder"></i>{{task.project}}</span><span><i class="el-icon-user"></i>{{task.owner}}</span></div></div></div></div></el-card></el-col>
+            <el-col :span="8"><el-card shadow="never" class="panel activity-panel"><div slot="header" class="panel-head"><span>最近活动</span><el-button type="text">全部日志</el-button></div><el-timeline><el-timeline-item v-for="item in activities" :key="item.time" :timestamp="item.time" :type="item.type" placement="top"><div class="activity-title">{{item.title}}</div><div class="activity-desc">{{item.desc}}</div></el-timeline-item></el-timeline></el-card></el-col>
+          </el-row>
+          <el-card shadow="never" class="panel agent-panel"><div slot="header" class="panel-head"><span>Agent 在线状态</span><el-button type="text">管理 Agent</el-button></div><el-table :data="agents" size="small"><el-table-column prop="name" label="Agent" min-width="180"><template slot-scope="scope"><span class="agent-name"><i class="online-dot"></i>{{scope.row.name}}</span></template></el-table-column><el-table-column prop="type" label="类型"></el-table-column><el-table-column prop="task" label="当前任务"></el-table-column><el-table-column prop="seen" label="最后活动"></el-table-column><el-table-column label="状态"><template slot-scope="scope"><el-tag type="success" size="mini">在线</el-tag></template></el-table-column></el-table></el-card>
+        </el-main>
+      </el-container>
+    </el-container>
+    <el-dialog title="新建任务" :visible.sync="dialogVisible" width="460px"><el-form label-position="top"><el-form-item label="任务标题"><el-input placeholder="例如：优化关卡加载流程"></el-input></el-form-item><el-form-item label="所属项目"><el-select placeholder="选择项目" style="width:100%"><el-option label="map-build" value="map-build"></el-option><el-option label="TinySwordsPM" value="tinyswords"></el-option></el-select></el-form-item></el-form><span slot="footer"><el-button @click="dialogVisible=false">取消</el-button><el-button type="primary" @click="dialogVisible=false">创建任务</el-button></span></el-dialog>
+  </div>
+  <script src="https://unpkg.com/vue@2.7.16/dist/vue.js"></script><script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script>
+    new Vue({el:'#app',data(){return{query:'',dialogVisible:false,stats:[{label:'全部任务',value:24,trend:12,tone:'blue',icon:'el-icon-s-order'},{label:'进行中',value:8,trend:8,tone:'orange',icon:'el-icon-loading'},{label:'待验收',value:5,trend:-4,tone:'purple',icon:'el-icon-view'},{label:'本周完成',value:11,trend:24,tone:'green',icon:'el-icon-success'}],board:[{key:'ready',label:'可认领',items:[{id:'TS-142',title:'重构地图加载流程',project:'map-build',owner:'未认领',priority:'高'},{id:'TS-139',title:'补充关卡验收文档',project:'TinySwordsPM',owner:'未认领',priority:'中'}]},{key:'claimed',label:'进行中',items:[{id:'TS-137',title:'统一 NPC 出生点配置',project:'map-build',owner:'agent-fox',priority:'高'},{id:'TS-134',title:'调整战斗 HUD 层级',project:'TinySwordsPM',owner:'agent-luna',priority:'中'}]},{key:'review',label:'待验收',items:[{id:'TS-128',title:'修复场景切换黑屏',project:'map-build',owner:'agent-owl',priority:'高'}]},{key:'done',label:'已完成',items:[{id:'TS-126',title:'接入任务审计日志',project:'task-coordinator',owner:'agent-fox',priority:'中'}]}],activities:[{time:'10分钟前',type:'success',title:'TS-126 已完成',desc:'agent-fox 提交了验收记录'},{time:'32分钟前',type:'warning',title:'TS-137 被认领',desc:'agent-fox 开始处理任务'},{time:'1小时前',type:'primary',title:'新建 TS-142',desc:'管理员创建了地图加载任务'},{time:'昨天 18:24',type:'info',title:'服务启动',desc:'Task Coordinator v0.1.0'}],agents:[{name:'agent-fox',type:'Claude Code',task:'TS-137',seen:'刚刚'},{name:'agent-luna',type:'Codex',task:'TS-134',seen:'2 分钟前'},{name:'agent-owl',type:'Cursor',task:'TS-128',seen:'8 分钟前'}]}},methods:{newTask(){this.dialogVisible=true},showAll(){this.$message.info('这里将进入完整任务列表')},selectTask(task){this.$message.info(task.id+' · '+task.title)}}});
+  </script>
+</body>
+</html>

@@ -5,6 +5,7 @@
 host = "127.0.0.1"
 port = 8787
 anonymous_read = true
+anonymous_admin = true
 
 [database]
 url = "sqlite:///E:/godot/task-coordinator/data/taskcoord.sqlite3"

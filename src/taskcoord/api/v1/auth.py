@@ -54,5 +54,7 @@ def logout(request: Request, response: Response, session: Session = Depends(db_s
 @router.get("/auth/me")
 def me(actor: Actor = Depends(require_csrf)) -> dict:
     if actor.user is None:
+        if actor.kind == "admin":
+            return ok(username="local", csrf_token=None)
         raise ApiError(401, "AUTH_REQUIRED", "需要管理员登录")
     return ok(username=actor.user.username, csrf_token=actor.session.csrf_token if actor.session else None)
