@@ -192,7 +192,8 @@ def apply_claim(session: Session, settings: Settings, task: Task, agent: Agent, 
     if not _BRANCH.fullmatch(branch_name or ""):
         raise ApiError(422, "VALIDATION_ERROR", "分支名不合法")
     now = utcnow()
-    expire_due(session, now)
+    if settings.lease_enabled:
+        expire_due(session, now)
     project = session.get(Project, task.project_id)
     if project is None or not project.active:
         raise ApiError(409, "PROJECT_INACTIVE", "项目未启用，不能认领")
@@ -217,7 +218,7 @@ def apply_claim(session: Session, settings: Settings, task: Task, agent: Agent, 
     task.owner_agent_id = agent.id
     task.claim_token_hash = hash_token(token)
     task.claim_reissue_pending = False
-    task.lease_expires_at = lease_deadline(settings, now)
+    task.lease_expires_at = lease_deadline(settings, now) if settings.lease_enabled else None
     task.branch_name = branch_name
     task.version += 1
     task.updated_at = now

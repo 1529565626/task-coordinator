@@ -43,7 +43,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             prepare_database(settings, engine)
             with session_scope(factory) as session:
                 _seed_admin(session, settings)
-                expire_due(session, utcnow())
+                if app.state.settings.lease_enabled:
+                    expire_due(session, utcnow())
             app.state.ready = True
             app.state.ready_error = None
             app.state.sweeper_ok = True
@@ -164,8 +165,9 @@ async def _sweep(app: FastAPI) -> None:
     while True:
         await asyncio.sleep(30)
         try:
-            with session_scope(app.state.session_factory) as session:
-                expire_due(session, utcnow())
+            if app.state.settings.lease_enabled:
+                with session_scope(app.state.session_factory) as session:
+                    expire_due(session, utcnow())
             if app.state.ready:
                 with session_scope(app.state.session_factory) as session:
                     maybe_scheduled_backup(app.state.settings, session)

@@ -19,6 +19,7 @@ class Settings(BaseModel):
     busy_timeout_ms: int = 5000
     lease_duration_minutes: int = 120
     heartbeat_minutes: int = 15
+    lease_enabled: bool = False
     backup_directory: Path
     backup_retention_days: int = 30
     log_path: Path
@@ -103,6 +104,7 @@ def load_settings() -> Settings:
         busy_timeout_ms=int(_env("TASKCOORD_BUSY_TIMEOUT_MS") or database.get("busy_timeout_ms", 5000)),
         lease_duration_minutes=int(_env("TASKCOORD_LEASE_MINUTES") or leases.get("duration_minutes", 120)),
         heartbeat_minutes=int(_env("TASKCOORD_HEARTBEAT_MINUTES") or leases.get("heartbeat_minutes", 15)),
+        lease_enabled=_bool_env("TASKCOORD_LEASE_ENABLED", leases.get("enabled", False)),
         backup_directory=backup_dir,
         backup_retention_days=int(backup.get("retention_days", 30)),
         log_path=log_path,

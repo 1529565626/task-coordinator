@@ -12,6 +12,7 @@ url = "sqlite:///E:/godot/task-coordinator/data/taskcoord.sqlite3"
 busy_timeout_ms = 5000
 
 [leases]
+enabled = false
 duration_minutes = 120
 heartbeat_minutes = 15
 

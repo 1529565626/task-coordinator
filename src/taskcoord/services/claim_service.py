@@ -22,7 +22,8 @@ def claim(session: Session, settings: Settings, task: Task, agent: Agent, branch
 
 def heartbeat(session: Session, settings: Settings, task: Task, agent: Agent, claim_token: str) -> None:
     now = utcnow()
-    expire_due(session, now)
+    if settings.lease_enabled:
+        expire_due(session, now)
     if task.status != "claimed":
         raise ApiError(409, "ILLEGAL_TRANSITION", "任务不在认领中", {"status": task.status})
     require_owner_token(task, agent, claim_token)

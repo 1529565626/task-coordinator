@@ -220,7 +220,7 @@ def reject_task(session: Session, settings: Settings, task: Task, actor_user: st
 
         task.claim_token_hash = hash_token(new_token())
         task.claim_reissue_pending = True
-        task.lease_expires_at = lease_deadline(settings, utcnow())
+        task.lease_expires_at = lease_deadline(settings, utcnow()) if settings.lease_enabled else None
     return task
 
 
