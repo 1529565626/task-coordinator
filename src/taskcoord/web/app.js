@@ -1,3 +1,11 @@
+/* crypto.randomUUID 仅在安全上下文可用，HTTP+IP 部署时降级 */
+const uuid4 = () =>
+  typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : [...crypto.getRandomValues(new Uint8Array(16))]
+        .reduce((s, b, i) => s + (i === 6 ? (b & 15) | 64 : i === 8 ? (b & 63) | 128 : b).toString(16).padStart(2, "0"), "")
+        .replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
+
 const state = {
   csrf: null,
   tasks: [],
@@ -24,7 +32,7 @@ async function api(path, options = {}) {
   if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
   if (state.csrf && options.method && options.method !== "GET") headers["X-CSRF-Token"] = state.csrf;
   if (options.method && options.method !== "GET" && !headers["Idempotency-Key"]) {
-    headers["Idempotency-Key"] = crypto.randomUUID();
+    headers["Idempotency-Key"] = uuid4();
   }
   const response = await fetch(path, { ...options, headers, credentials: "same-origin" });
   const payload = await response.json();

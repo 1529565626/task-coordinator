@@ -1,6 +1,14 @@
 /* 鉴权对比台：固定少量接口，左右并排「无凭证 vs 有凭证」。 */
 "use strict";
 
+/* crypto.randomUUID 仅在安全上下文可用，HTTP+IP 部署时降级 */
+const uuid4 = () =>
+  typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : [...crypto.getRandomValues(new Uint8Array(16))]
+        .reduce((s, b, i) => s + (i === 6 ? (b & 15) | 64 : i === 8 ? (b & 63) | 128 : b).toString(16).padStart(2, "0"), "")
+        .replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
+
 const state = {
   csrf: null,
   username: null,
@@ -123,7 +131,7 @@ async function send(api, side) {
 
   if (api.m !== "GET") {
     headers["Content-Type"] = "application/json";
-    headers["Idempotency-Key"] = crypto.randomUUID();
+    headers["Idempotency-Key"] = uuid4();
     body = JSON.stringify(typeof api.body === "function" ? api.body() : (api.body || {}));
   }
 
