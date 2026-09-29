@@ -27,8 +27,17 @@ class Settings(BaseModel):
     admin_username: str = "admin"
     admin_password_hash: str = ""
     session_secret: str = ""
+    session_ttl_hours: int = 12
+    health_token: str = ""
     manage_lock: bool = False
     root_dir: Path = Field(default=ROOT_DIR)
+
+    @field_validator("session_ttl_hours")
+    @classmethod
+    def _session_ttl(cls, value: int) -> int:
+        if not 1 <= value <= 168:
+            raise ValueError("session ttl must be between 1 and 168 hours")
+        return value
 
     @field_validator("lease_duration_minutes")
     @classmethod
@@ -112,6 +121,8 @@ def load_settings() -> Settings:
         admin_username=_env("TASKCOORD_ADMIN_USERNAME", "admin") or "admin",
         admin_password_hash=_env("TASKCOORD_ADMIN_PASSWORD_HASH"),
         session_secret=_env("TASKCOORD_SESSION_SECRET"),
+        session_ttl_hours=int(_env("TASKCOORD_SESSION_TTL_HOURS") or 12),
+        health_token=_env("TASKCOORD_HEALTH_TOKEN"),
     )
 
 

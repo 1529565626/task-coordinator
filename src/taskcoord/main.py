@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from taskcoord import __version__
 from taskcoord.api.v1 import admin, auth, claims, events, health, projects, tasks
+from taskcoord.api.v1.auth import COOKIE as SESSION_COOKIE
 from taskcoord.clock import isoformat, utcnow
 from taskcoord.context import request_id_var
 from taskcoord.database import create_db_engine, prepare_database, session_factory, session_scope
@@ -88,6 +89,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def request_context(request, call_next):
         request_id = "req_" + uuid.uuid4().hex
         token = request_id_var.set(request_id)
+        gate = _auth_gate_response(request, settings)
+        if gate is not None:
+            gate.headers["X-Request-Id"] = request_id
+            request_id_var.reset(token)
+            return gate
         try:
             if (
                 request.method in WRITE_METHODS
@@ -116,12 +122,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(ApiError)
     async def handle_api_error(_request, exc: ApiError):
+        headers = {}
+        if exc.status == 401:
+            # 让 Agent 客户端可以程序化识别需要重新认证。
+            headers["WWW-Authenticate"] = "Bearer"
         return JSONResponse(
             status_code=exc.status,
             content={
                 "request_id": request_id_var.get(),
                 "error": {"code": exc.code, "message": exc.message, "details": exc.details},
             },
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -158,7 +169,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND", "message": "Demo 页面尚未安装"}})
         return FileResponse(page)
 
+    @app.get("/apitest")
+    def apitest():
+        page = web_dir / "api-test.html"
+        if not page.exists():
+            return JSONResponse(status_code=404, content={"error": {"code": "NOT_FOUND", "message": "API 测试页面尚未安装"}})
+        return FileResponse(page)
+
     return app
+
+
+def _auth_gate_response(request, settings: Settings):
+    """写接口前置凭证检查：匿名请求在进入路由/校验前就拿到 401。
+
+    只做"有没有带凭证"的存在性检查，不做有效性验证（有效性由 resolve_actor 负责）。
+    LAN 模式（anonymous_admin=true）允许匿名管理写，直接放行。
+    """
+    if request.method not in WRITE_METHODS or not request.url.path.startswith("/api/"):
+        return None
+    path = request.url.path
+    if path.startswith("/api/v1/auth/login") or path.startswith("/api/v1/health"):
+        return None
+    if settings.anonymous_admin:
+        return None
+    has_bearer = request.headers.get("authorization", "").lower().startswith("bearer ")
+    has_session = SESSION_COOKIE in request.cookies
+    if has_bearer or has_session:
+        return None
+    return JSONResponse(
+        status_code=401,
+        content={
+            "request_id": request_id_var.get(),
+            "error": {"code": "AUTH_REQUIRED", "message": "需要 Agent token 或管理员会话", "details": {}},
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def _sweep(app: FastAPI) -> None:

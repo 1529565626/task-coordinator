@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
@@ -17,8 +19,22 @@ def live() -> dict:
     return ok(status="live")
 
 
+def _require_health_token(request: Request) -> None:
+    """ready 检查会暴露运维细节；配置了 health_token 时必须携带。"""
+    expected = request.app.state.settings.health_token
+    if not expected:
+        return
+    provided = request.headers.get("x-health-token", "")
+    header = request.headers.get("authorization", "")
+    if not provided and header.lower().startswith("bearer "):
+        provided = header.split(" ", 1)[1].strip()
+    if not provided or not hmac.compare_digest(provided, expected):
+        raise ApiError(401, "AUTH_REQUIRED", "健康检查令牌缺失或无效")
+
+
 @router.get("/health/ready")
 def ready(request: Request, session: Session = Depends(db_session)) -> dict:
+    _require_health_token(request)
     app = request.app
     if not getattr(app.state, "ready", False) or not getattr(app.state, "sweeper_ok", False):
         raise ApiError(503, "NOT_READY", getattr(app.state, "ready_error", None) or "服务未就绪")

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Task Coordinator · 鉴权对比台</title>
+<link rel="stylesheet" href="/assets/api-test.css?v=3">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark">TC</span>
+    <div>
+      <strong>鉴权对比台</strong>
+      <small>左侧无凭证 · 右侧带凭证 · 一眼看拦截是否生效</small>
+    </div>
+  </div>
+  <div class="top-status">
+    <span id="pill-cred" class="pill neutral">凭证：未配置</span>
+    <a href="/" class="ghost-link">← 返回工作台</a>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>① 配置右侧凭证（二选一）</h2>
+  <div class="cred-grid">
+    <div class="cred-card">
+      <label class="mode">
+        <input type="radio" name="cred-mode" value="session" checked>
+        <span>管理员登录（Cookie + CSRF）</span>
+      </label>
+      <div class="row"><label>用户名</label><input id="login-username" value="admin"></div>
+      <div class="row"><label>密码</label><input id="login-password" type="password" placeholder="输入密码"></div>
+      <div class="row buttons">
+        <button id="btn-login" class="button primary" type="button">登录</button>
+        <button id="btn-logout" class="button" type="button">退出</button>
+      </div>
+      <p class="hint">演示实例可用 <code>admin / DemoAdmin2026!</code>。登录成功后右侧请求会自动带 Cookie 与 CSRF。</p>
+    </div>
+    <div class="cred-card">
+      <label class="mode">
+        <input type="radio" name="cred-mode" value="bearer">
+        <span>Agent API Token（Bearer）</span>
+      </label>
+      <div class="row"><label>Token</label><input id="bearer-input" placeholder="粘贴创建 Agent 时返回的 api_token"></div>
+      <div class="row buttons">
+        <button id="btn-bearer-clear" class="button" type="button">清除</button>
+      </div>
+      <p class="hint">在工作台「Agent」里创建后复制；右侧请求只带 <code>Authorization: Bearer …</code>，不依赖 Cookie。</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>② 选接口，点「对比」</h2>
+  <p class="lead">左侧始终 <code>credentials: omit</code>（不带 Cookie、不带 Token）；右侧按上方所选凭证发送。同一 URL、同一方法，只比鉴权差异。</p>
+  <div id="api-list" class="api-list"></div>
+</section>
+
+<section class="panel">
+  <h2>③ 对比结果</h2>
+  <div id="results"><p class="muted">尚未对比。点上方某个接口的「对比」按钮。</p></div>
+</section>
+
+<script src="/assets/api-test.js?v=3"></script>
+</body>
+</html>

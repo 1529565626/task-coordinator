@@ -1,25 +1,36 @@
-# Non-secret configuration. Copy to config/service.toml.
-# Bind 127.0.0.1 until the host is ready for the LAN.
+# 非密配置。复制为 config/service.toml 后按环境修改。
+# 机密（密码哈希、session secret、health token）只放 .env，勿写进本文件或 Git。
+# 云端：anonymous_* 必须 false。局域网试用可临时打开，公开部署前必须关闭。
+# 完整步骤见 docs/cloud-deployment.md；给腾讯云助手的提示词见 docs/tencent-cloud-deploy-prompt.md。
 
 [server]
+# Nginx/Caddy 反代时用 127.0.0.1；直接对外改为 0.0.0.0 并用安全组限源。
 host = "127.0.0.1"
 port = 8787
-anonymous_read = true
-anonymous_admin = true
+# false：读接口需要 Agent Bearer token 或管理员会话（云端必须 false）。
+anonymous_read = false
+# false：管理写必须登录 + CSRF（云端必须 false）。
+anonymous_admin = false
 
 [database]
-url = "sqlite:///E:/godot/task-coordinator/data/taskcoord.sqlite3"
+# 密码中的特殊字符必须 URL 编码。也可用环境变量 TASKCOORD_DATABASE_URL 覆盖本项。
+url = "mysql+pymysql://taskcoord:<URL_ENCODED_PASSWORD>@localhost:3306/taskcoord?charset=utf8mb4"
 busy_timeout_ms = 5000
 
 [leases]
-enabled = false
+enabled = true
 duration_minutes = 120
 heartbeat_minutes = 15
 
 [backup]
-directory = "E:/godot/task-coordinator/data/backups"
+# 云端建议绝对路径，例如 /opt/task-coordinator/data/backups
+directory = "data/backups"
 retention_days = 30
 
 [logging]
-path = "E:/godot/task-coordinator/logs/taskcoord.log"
+# 云端建议绝对路径，例如 /opt/task-coordinator/logs/taskcoord.log
+path = "logs/taskcoord.log"
 retention_days = 14
+
+# 健康检查令牌放 .env 的 TASKCOORD_HEALTH_TOKEN。
+# 设置后 GET /api/v1/health/ready 需 X-Health-Token 或 Bearer；/health/live 始终开放。

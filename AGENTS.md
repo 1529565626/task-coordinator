@@ -23,7 +23,7 @@ Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest�
 - 管理员操作沿用会话、CSRF、幂等键和任务版本检查；界面不得绕过服务端状态机。
 - 不覆盖正在编辑的表单；失败显示明确错误，未登录保留可用的只读入口。
 - 主题只在浏览器本地保存，不存储密码或令牌。验证应包含三套主题、窄屏、空数据、登录失效与实际任务流程。
-- 本项目的个人局域网实例使用 `anonymous_admin = true`，不启用账户权限；公开部署前必须关闭该选项并恢复管理员认证。
+- 本项目的个人局域网实例使用 `anonymous_admin = true`，不启用账户权限；公开部署前必须关闭该选项并恢复管理员认证。云端鉴权方案（Agent Bearer token / 管理员会话 / 接口矩阵）见 `docs/authorization.md`。
 
 ## 目录
 
@@ -31,7 +31,7 @@ Python 3.12、FastAPI、Uvicorn、SQLAlchemy 2、Alembic、Pydantic 2、Pytest�
 - `migrations/`：Alembic
 - `tests/unit`、`tests/integration`、`tests/concurrency`：测试
 - `scripts/`：本机安装、启动、备份、迁移
-- `docs/`：API、运维、迁移、Agent 接入
+- `docs/`：API、运维、迁移、Agent 接入；云端部署见 `docs/cloud-deployment.md`，腾讯云助手提示词见 `docs/tencent-cloud-deploy-prompt.md`，鉴权见 `docs/authorization.md`
 
 ## 写入规则
 

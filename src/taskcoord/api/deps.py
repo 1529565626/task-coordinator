@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import hmac
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,6 +19,8 @@ from taskcoord.models import Agent, Session as UserSession, User
 from taskcoord.security import hash_token, request_fingerprint
 from taskcoord.services.rules import run_idempotent
 
+SESSION_COOKIE = "taskcoord_session"
+
 
 def db_session(request: Request):
     factory = request.app.state.session_factory
@@ -30,7 +32,7 @@ def ok(**payload) -> dict:
     return {"request_id": request_id_var.get(), **payload}
 
 
-def resolve_actor(request: Request, session: Session = Depends(db_session)) -> Actor:
+def resolve_actor(request: Request, response: Response, session: Session = Depends(db_session)) -> Actor:
     header = request.headers.get("authorization", "")
     if header.lower().startswith("bearer "):
         token = header.split(" ", 1)[1].strip()
@@ -41,17 +43,35 @@ def resolve_actor(request: Request, session: Session = Depends(db_session)) -> A
             raise ApiError(403, "AGENT_DISABLED", "Agent 已停用")
         _touch_agent(agent)
         return Actor(kind="agent", agent=agent)
-    cookie = request.cookies.get("taskcoord_session")
+    cookie = request.cookies.get(SESSION_COOKIE)
     if cookie:
         row = session.scalar(select(UserSession).where(UserSession.token_hash == hash_token(cookie)))
         if row is not None and ensure_utc(row.expires_at) > utcnow():
             user = session.get(User, row.user_id)
             if user is not None:
+                _renew_session(response, cookie, row, request.app.state.settings)
                 return Actor(kind="admin", user=user, session=row)
         # Stale cookies fall through to anonymous so read-only pages still work.
     if request.app.state.settings.anonymous_admin:
         return Actor(kind="admin")
     return Actor(kind="anonymous")
+
+
+def _renew_session(response: Response, cookie_value: str, row: UserSession, settings) -> None:
+    """滑动续期：剩余有效期不足一半时续满整个窗口，并重新下发 Cookie 延长浏览器侧有效期。"""
+    ttl = timedelta(hours=settings.session_ttl_hours)
+    now = utcnow()
+    if ensure_utc(row.expires_at) - now > ttl / 2:
+        return
+    row.expires_at = now + ttl
+    response.set_cookie(
+        SESSION_COOKIE,
+        cookie_value,
+        httponly=True,
+        samesite="lax",
+        path="/",
+        max_age=int(ttl.total_seconds()),
+    )
 
 
 def require_admin(actor: Actor = Depends(resolve_actor)) -> Actor:

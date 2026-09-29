@@ -1,0 +1,30 @@
+# Task Coordinator systemd 服务单元
+# 安装：sudo cp deploy/taskcoord.service /etc/systemd/system/
+#       sudo systemctl daemon-reload && sudo systemctl enable --now taskcoord
+# 前提：代码位于 /opt/task-coordinator，虚拟环境已建好，.env 与 config/service.toml 已配置。
+
+[Unit]
+Description=Task Coordinator (FastAPI + uvicorn)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=taskcoord
+Group=taskcoord
+WorkingDirectory=/opt/task-coordinator
+# 应用自身读取 /opt/task-coordinator/.env（settings.py 的 _load_dotenv），
+# 不使用 systemd EnvironmentFile，避免密码哈希中的特殊字符被 systemd 拆分。
+ExecStart=/opt/task-coordinator/.venv/bin/python -m taskcoord.main
+Restart=on-failure
+RestartSec=5
+
+# 基本加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/task-coordinator
+
+[Install]
+WantedBy=multi-user.target
