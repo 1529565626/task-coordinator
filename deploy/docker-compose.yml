@@ -1,0 +1,28 @@
+# Task Coordinator · 应用容器（复用服务器上已有的 MySQL 容器）
+# 用法：在仓库根目录执行
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# 前提：
+#   1) 根目录存在 .env（管理员凭据）与 config/service.toml（数据库连接等）
+#   2) .env 中的 TASKCOORD_DATABASE_URL 指向 MySQL 容器名，例如
+#      mysql+pymysql://taskcoord:***@misery-rx-mysql:3306/taskcoord?charset=utf8mb4
+#   3) 外部网络 misery-rx_misery-rx-net 已存在（docker network ls 可查）
+services:
+  task-coordinator:
+    build: ..
+    image: task-coordinator:latest
+    container_name: task-coordinator
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ../.env:/app/.env:ro
+      - ../config/service.toml:/app/config/service.toml:ro
+      - ../data:/app/data
+      - ../logs:/app/logs
+    networks:
+      - misery-rx-net
+
+networks:
+  misery-rx-net:
+    external: true
+    name: misery-rx_misery-rx-net

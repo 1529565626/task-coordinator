@@ -14,8 +14,12 @@ data/*.sqlite3
 data/*.sqlite3-*
 data/backups/*
 !data/backups/.gitkeep
+data/*.png
 logs/*
 !logs/.gitkeep
+
+# 本地 AI 工作区（会话记忆，不入库）
+.workbuddy/
 
 *.egg-info/
 dist/
