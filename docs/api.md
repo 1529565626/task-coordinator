@@ -2,7 +2,11 @@
 
 统一前缀 `/api/v1`。时间是带时区的 ISO 8601。每个 JSON 响应都有 `request_id`。写请求带 `Idempotency-Key`。
 
-Agent 使用 `Authorization: Bearer <api token>`。当前个人局域网实例启用 `anonymous_admin = true`，页面和本机管理写操作不需要账户、Cookie 或 CSRF；Agent 认领仍使用 Agent token 与 claim token。多人或公网部署必须关闭该选项，恢复管理员登录 `POST /auth/login`、HttpOnly cookie `taskcoord_session` 和写操作 CSRF 校验。页面不保存 API token 或 claim token。
+Agent 使用 `Authorization: Bearer <api token>`（由管理员在后台创建 Agent 时签发，明文只显示一次，详见 `agent-integration.md`）。
+
+**云端模式（默认）**：`anonymous_read = anonymous_admin = false`，除 `GET /health/live` 和 `POST /auth/login` 外所有接口都需要凭证——Agent 带 Bearer token，管理写另需会话 Cookie + `X-CSRF-Token`（登录 `POST /auth/login` 签发，会话 12 小时滑动续期）。登录失败连续 5 次/分钟触发 `429 RATE_LIMITED`。管理凭证与 Agent token 互不相通。页面不保存 API token 或 claim token。
+
+**局域网遗留模式**：`anonymous_admin = true` 时页面和本机管理写免认证，仅供个人内网实例，公网部署禁止使用。
 
 ## 健康
 
@@ -43,4 +47,4 @@ Content-Type: application/json
 
 客户端看 `error.code`，不要解析中文 `message`。
 
-`400` 字段不合法，`401` 未认证，`403` 权限或 CSRF，`404` 不存在，`409` 冲突或非法状态，`422` 业务校验，`503` 未就绪或数据库忙。
+`400` 字段不合法，`401` 未认证（Agent token 无效/过期或未携带），`403` 权限不足、CSRF 失败或 Agent 已停用（`AGENT_DISABLED`），`404` 不存在，`409` 冲突或非法状态，`422` 业务校验，`429` 登录限流，`503` 未就绪或数据库忙。所有 401 响应都带 `WWW-Authenticate: Bearer` 头，客户端可据此触发重新认证。
