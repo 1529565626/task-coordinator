@@ -47,3 +47,22 @@ docker logs task-coordinator --tail 20
 [python-build-standalone](https://github.com/astral-sh/python-build-standalone)
 （预编译二进制，兼容 CentOS 7 的 glibc 2.17）：下载解压后直接建 venv，服务用
 `deploy/taskcoord.service`（systemd）管理，数据库地址改回 `127.0.0.1:3306` 即可。
+
+## 数据初始化（导入历史数据）
+
+仓库自带云端初始化脚本 `deploy/seed/cloud_init.sql`（2026-09-28 从局域网库导出：
+10 张表 + 979 行业务数据，tasks=193 / task_events=257 / agents=37 / projects=2，
+含 DROP TABLE 与 alembic 版本号，可重复导入）：
+
+```bash
+docker exec -i misery-rx-mysql mysql -u root -p --default-character-set=utf8mb4 taskcoord \
+  < deploy/seed/cloud_init.sql
+
+# 验证
+docker exec -it misery-rx-mysql mysql -u root -p taskcoord \
+  -e "SELECT (SELECT COUNT(*) FROM tasks) tasks, (SELECT COUNT(*) FROM task_events) events, (SELECT COUNT(*) FROM agents) agents, (SELECT COUNT(*) FROM projects) projects;"
+# 预期: 193 / 257 / 37 / 2
+```
+
+导入后重启应用容器使服务重新加载。注意这是快照数据：云端上线后请勿再向局域网
+旧实例写入业务数据，避免两库分叉。
