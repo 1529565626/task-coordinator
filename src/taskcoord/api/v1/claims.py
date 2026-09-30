@@ -36,12 +36,12 @@ def post_claim(
         token = claim_service.claim(
             _session,
             request.app.state.settings,
-            get_task(_session, task_id),
+            get_task(_session, task_id, for_update=True),
             _agent(_session, actor),
             payload.branch_name,
             payload.continue_from,
         )
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id)), "claim_token": token}
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True)), "claim_token": token}
 
     return perform(request, session, actor, work)
 
@@ -57,9 +57,9 @@ def post_heartbeat(
     ensure_same_agent(actor, payload.agent_id)
 
     def work(_session: Session):
-        task = get_task(_session, task_id)
+        task = get_task(_session, task_id, for_update=True)
         claim_service.heartbeat(_session, request.app.state.settings, task, _agent(_session, actor), payload.claim_token)
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id))}
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True))}
 
     return perform(request, session, actor, work)
 
@@ -73,7 +73,7 @@ def post_release(
     actor: Actor = Depends(require_csrf),
 ):
     def work(_session: Session):
-        task = get_task(_session, task_id)
+        task = get_task(_session, task_id, for_update=True)
         if actor.agent is not None:
             ensure_same_agent(actor, payload.agent_id)
             claim_service.release(_session, task, actor.agent, payload.claim_token, payload.reason)
@@ -86,7 +86,7 @@ def post_release(
 
             _move(_session, task, "release", actor_user=actor.label, reason=payload.reason, event_type="task.released")
             _clear_claim(task)
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id))}
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True))}
 
     return perform(request, session, actor, work)
 
@@ -104,7 +104,7 @@ def post_deliver(
     def work(_session: Session):
         claim_service.deliver(
             _session,
-            get_task(_session, task_id),
+            get_task(_session, task_id, for_update=True),
             _agent(_session, actor),
             payload.claim_token,
             payload.branch_name,
@@ -112,7 +112,7 @@ def post_deliver(
             payload.tests,
             payload.notes,
         )
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id))}
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True))}
 
     return perform(request, session, actor, work)
 
@@ -131,8 +131,8 @@ def post_takeover(
         owner = _session.get(Agent, payload.agent_id)
         if owner is None:
             raise ApiError(404, "AGENT_NOT_FOUND", "目标 Agent 不存在")
-        claim_service.takeover(_session, request.app.state.settings, get_task(_session, task_id), owner, actor.label, payload.reason)
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id))}
+        claim_service.takeover(_session, request.app.state.settings, get_task(_session, task_id, for_update=True), owner, actor.label, payload.reason)
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True))}
 
     return perform(request, session, actor, work)
 
@@ -140,10 +140,10 @@ def post_takeover(
 @router.post("/tasks/{task_id}/reissue-claim-token")
 def post_reissue(task_id: str, request: Request, session: Session = Depends(db_session), actor: Actor = Depends(require_agent)):
     def work(_session: Session):
-        token = claim_service.reissue(_session, get_task(_session, task_id), _agent(_session, actor))
+        token = claim_service.reissue(_session, get_task(_session, task_id, for_update=True), _agent(_session, actor))
         return 200, {
             "request_id": request_id_var.get(),
-            "task": task_dict(get_task(_session, task_id)),
+            "task": task_dict(get_task(_session, task_id, for_update=True)),
             "claim_token": token,
         }
 

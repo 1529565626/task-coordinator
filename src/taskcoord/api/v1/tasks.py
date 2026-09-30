@@ -117,7 +117,7 @@ def patch_task(
     def work(_session: Session):
         task = update_task(
             _session,
-            get_task(_session, task_id),
+            get_task(_session, task_id, for_update=True),
             version=payload.version,
             title=payload.title,
             description=payload.description,
@@ -135,7 +135,7 @@ def post_confirm(task_id: str, request: Request, session: Session = Depends(db_s
     require_admin(actor)
 
     def work(_session: Session):
-        task = confirm_task(_session, get_task(_session, task_id), actor.label)
+        task = confirm_task(_session, get_task(_session, task_id, for_update=True), actor.label)
         return 200, {"request_id": request_id_var.get(), "task": task_dict(task)}
 
     return perform(request, session, actor, work)
@@ -150,7 +150,7 @@ def post_block(
     actor: Actor = Depends(require_csrf),
 ):
     def work(_session: Session):
-        task = get_task(_session, task_id)
+        task = get_task(_session, task_id, for_update=True)
         if actor.agent is not None:
             body_agent = request.headers.get("x-agent-id", actor.agent.id)
             ensure_same_agent(actor, body_agent)
@@ -162,7 +162,7 @@ def post_block(
         else:
             require_admin(actor)
             block_task(_session, task, payload.reason, actor_user=actor.label)
-        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id))}
+        return 200, {"request_id": request_id_var.get(), "task": task_dict(get_task(_session, task_id, for_update=True))}
 
     return perform(request, session, actor, work)
 
@@ -178,7 +178,7 @@ def post_unblock(
     require_admin(actor)
 
     def work(_session: Session):
-        task = unblock_task(_session, get_task(_session, task_id), payload.reason, actor.label)
+        task = unblock_task(_session, get_task(_session, task_id, for_update=True), payload.reason, actor.label)
         return 200, {"request_id": request_id_var.get(), "task": task_dict(task)}
 
     return perform(request, session, actor, work)
@@ -195,7 +195,7 @@ def post_cancel(
     require_admin(actor)
 
     def work(_session: Session):
-        task = cancel_task(_session, get_task(_session, task_id), payload.reason, actor.label)
+        task = cancel_task(_session, get_task(_session, task_id, for_update=True), payload.reason, actor.label)
         return 200, {"request_id": request_id_var.get(), "task": task_dict(task)}
 
     return perform(request, session, actor, work)
@@ -206,7 +206,7 @@ def post_accept(task_id: str, request: Request, session: Session = Depends(db_se
     require_admin(actor)
 
     def work(_session: Session):
-        task = accept_task(_session, get_task(_session, task_id), actor.label)
+        task = accept_task(_session, get_task(_session, task_id, for_update=True), actor.label)
         return 200, {"request_id": request_id_var.get(), "task": task_dict(task)}
 
     return perform(request, session, actor, work)
@@ -223,7 +223,7 @@ def post_reject(
     require_admin(actor)
 
     def work(_session: Session):
-        task = reject_task(_session, request.app.state.settings, get_task(_session, task_id), actor.label, payload.reason, payload.return_to)
+        task = reject_task(_session, request.app.state.settings, get_task(_session, task_id, for_update=True), actor.label, payload.reason, payload.return_to)
         return 200, {"request_id": request_id_var.get(), "task": task_dict(task)}
 
     return perform(request, session, actor, work)

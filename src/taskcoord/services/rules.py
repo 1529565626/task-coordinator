@@ -75,8 +75,17 @@ def _store_idempotency(session, actor_kind, actor_id, key, request_hash, status,
     )
 
 
-def get_task(session: Session, task_id: str) -> Task:
-    task = session.scalar(select(Task).options(selectinload(Task.scopes), selectinload(Task.project)).where(Task.id == task_id))
+def get_task(session: Session, task_id: str, *, for_update: bool = False) -> Task:
+    stmt = (
+        select(Task)
+        .options(selectinload(Task.scopes), selectinload(Task.project))
+        .where(Task.id == task_id)
+    )
+    if for_update:
+        # 写路径必须锁定任务行：MySQL 下防止并发 claim/takeover 双写竞态
+        # （SQLite 忽略 FOR UPDATE，由 BEGIN IMMEDIATE 串行化保证）。
+        stmt = stmt.with_for_update()
+    task = session.scalar(stmt)
     if task is None:
         raise ApiError(404, "TASK_NOT_FOUND", f"{task_id} 不存在")
     return task
