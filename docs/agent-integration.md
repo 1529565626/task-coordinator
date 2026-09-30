@@ -6,7 +6,7 @@
 
 Agent token 由管理员签发，Agent 本身不注册、不登录。云端部署的三种方式（等价）：
 
-1. **网页后台**：登录工作台 → Agent 页签 → 新建 → 复制一次性 `api_token`；
+1. **网页后台**：登录工作台 → 左侧「Agent」→「新增 Agent」→ 复制一次性 `api_token`（需要轮换时点该行的「轮换 Token」）；
 2. **API 测试台** `http://<服务器>:8787/apitest`：先登录拿会话，再发送"创建 Agent"卡片；
 3. **curl**（需管理员会话 Cookie + CSRF，见 `api.md`）：
 
